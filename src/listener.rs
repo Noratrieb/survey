@@ -1,9 +1,17 @@
 use std::mem::MaybeUninit;
 use std::{io, mem};
 
-const PORT: libc::in_port_t = 1234;
+const PORT: libc::in_port_t = 1112;
 
 const SOCKADDR_IN_SIZE: libc::socklen_t = mem::size_of::<libc::sockaddr_in>() as _;
+
+macro_rules! check_zero {
+    ($result:expr) => {
+        if $result != 0 {
+            return Err(io::Error::last_os_error());
+        }
+    };
+}
 
 pub fn listener() -> io::Result<()> {
     unsafe {
@@ -17,7 +25,7 @@ pub fn listener() -> io::Result<()> {
 
         let addr = libc::sockaddr_in {
             sin_family: libc::AF_INET.try_into().unwrap(),
-            sin_port: PORT,
+            sin_port: PORT.to_be(),
             sin_addr: libc::in_addr {
                 s_addr: libc::INADDR_ANY,
             },
@@ -32,21 +40,21 @@ pub fn listener() -> io::Result<()> {
 
         println!("Bound socket ({socket}) on port {PORT}");
 
-        let result = libc::listen(socket, 5);
-        if result != 0 {
-            return Err(io::Error::last_os_error());
-        }
+        check_zero!(libc::listen(socket, 5));
 
         println!("Listening on socket ({socket})");
 
         let mut peer_sockaddr = MaybeUninit::uninit();
         let mut sockaddr_size = 0;
         let connection = libc::accept(socket, peer_sockaddr.as_mut_ptr(), &mut sockaddr_size);
-        if connection < 0 {
+        if connection == -1 {
             return Err(io::Error::last_os_error());
         }
 
         println!("Received connection! (connfd={connection})");
+
+        check_zero!(libc::close(connection));
+        check_zero!(libc::close(socket));
     }
 
     Ok(())
