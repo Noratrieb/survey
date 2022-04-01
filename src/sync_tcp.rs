@@ -4,7 +4,7 @@ use std::{
     io::{Read, Write},
     mem,
     mem::MaybeUninit,
-    os::unix,
+    os::{unix, unix::io::RawFd},
 };
 
 const SOCKADDR_IN_SIZE: libc::socklen_t = mem::size_of::<libc::sockaddr_in>() as _;
@@ -87,6 +87,12 @@ impl Debug for SyncTcpListener {
     }
 }
 
+impl unix::io::AsRawFd for SyncTcpListener {
+    fn as_raw_fd(&self) -> RawFd {
+        self.fd
+    }
+}
+
 pub struct SyncTcpStream {
     fd: unix::io::RawFd,
     peer_sockaddr: libc::sockaddr_in,
@@ -131,6 +137,12 @@ impl Debug for SyncTcpStream {
             .field("fd", &self.fd)
             .field("peer_addr", &format_addr(self.peer_sockaddr))
             .finish()
+    }
+}
+
+impl unix::io::AsRawFd for SyncTcpStream {
+    fn as_raw_fd(&self) -> RawFd {
+        self.fd
     }
 }
 
