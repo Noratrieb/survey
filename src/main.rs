@@ -1,6 +1,7 @@
 use std::{
     io,
     io::{Read, Write},
+    time::Duration,
 };
 
 use survey::sync_tcp::{SyncTcpListener, SyncTcpStream};
@@ -20,11 +21,12 @@ pub fn main() {
 pub fn listener() -> io::Result<()> {
     let mut threads = Vec::new();
 
-    let mut listener = SyncTcpListener::bind_any(PORT)?;
+    let listener = SyncTcpListener::bind_any(PORT)?;
 
     println!("Bound listener on port {PORT}");
 
-    for stream in listener.accept() {
+    for stream in listener.incoming() {
+        let stream = stream?;
         let handle = std::thread::spawn(move || handler_thread(stream));
         threads.push(handle);
     }
@@ -53,11 +55,6 @@ fn handler(mut stream: SyncTcpStream) -> io::Result<()> {
     stream.write_all(b"\nAh, it's: '")?;
     stream.write_all(&buf)?;
     stream.write_all(b"'. I like them too owo")?;
-    println!("written stuff");
+    std::thread::sleep(Duration::from_millis(100));
     Ok(())
-}
-
-fn format_addr(addr: libc::in_addr) -> String {
-    let bytes = addr.s_addr.to_be_bytes();
-    format!("{}.{}.{}.{}", bytes[0], bytes[1], bytes[2], bytes[3])
 }
